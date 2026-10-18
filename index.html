@@ -132,6 +132,7 @@ function tones(l){var t=ac.currentTime;l.forEach(function(f,i){var o=ac.createOs
 function sound(k){if(!snd||!ac)return;var gap=k==="obj"?3000:(L.tank!==null&&L.tank<CRIT?2000:5000);if(Date.now()-beepAt<gap)return;beepAt=Date.now();tones(k==="obj"?[880,660,880,660,880,660]:[440,440,330])}
 $("snd").onclick=function(){snd=!snd;if(snd){var A=window.AudioContext||window.webkitAudioContext;if(!A){snd=false;log("เบราว์เซอร์ไม่รองรับเสียง",C.warn);return}ac=ac||new A();ac.resume();beepAt=0;tones([660,880])}$("snd").textContent="เสียง: "+(snd?"เปิด":"ปิด");$("snd").className=snd?"on":"g"};
 
+function paintObj(fo){$("co").className="card c7"+(fo===1?" hit":"");put("os",fo===null?"ไม่มีข้อมูลตัวตรวจ":fo?"พบสิ่งแปลกปลอมในถัง!":"ไม่พบสิ่งแปลกปลอม",fo===1?C.bad:fo===0?C.ok:C.y)}
 function onTel(d){
   var k=function(n,b){return num(d[n],0,b||100)},tank=k("tank"),soil=k("soil"),pump=k("pump",1),ref=k("refused",1e6),lo=k("tank_lo"),n=k("n",1e9),ts=k("total_sec",1e9),pc=k("pump_cnt",1e6),turb=k("turb"),wq=k("wq"),fo=k("foreign",1),fc=k("foreign_cnt",1e6),blk=k("blocked",1e6),obj=k("obj"),th=k("obj_thr");
   if(th===null&&turb!==null)th=thr(turb);
@@ -143,7 +144,7 @@ function onTel(d){
   put("soil",soil===null?"--":soil+" %");$("pump").className="sw"+(pump?" on":"");put("pump",pump===null?"--":pump?"เปิดอยู่":"ปิด");
   put("tot",ts===null?"--":hms(ts));put("pc",pc===null?"--":pc+" ครั้ง");put("rf",ref===null?"--":ref+" ครั้ง");
   var q=qual(turb);put("qg",q.x,q.c);put("qs","คะแนน "+(wq!==null?wq:turb!==null?100-turb:"--")+"/100");$("qf").style.width=(turb||0)+"%";$("qf").style.background=q.c;
-  $("co").className="card c7"+(fo===1?" hit":"");put("os",fo===null?"ไม่มีข้อมูลตัวตรวจ":fo?"พบสิ่งแปลกปลอมในถัง!":"ไม่พบสิ่งแปลกปลอม",fo===1?C.bad:fo===0?C.ok:C.y);
+  paintObj(fo);
   put("sT",turb===null?"--":turb+" %");put("sO",obj===null?"ไม่ส่งมา":obj+" %");put("sH",th===null?"--":th+" %");put("sF",fc===null?"--":fc+" ครั้ง");put("sB",blk===null?"--":blk+" ครั้ง");
   drawCh(turb,obj,th,fo===1);
   if(ref!==null){if(L.ref!=null&&ref>L.ref)log("บอร์ดปฏิเสธ/ดับปั๊ม: น้ำต่ำ (ถัง "+tank+" %)",C.bad);L.ref=ref}
@@ -152,7 +153,13 @@ function onTel(d){
   rows.push([new Date().toISOString(),n,tank,soil,pump,ref,lo,ts,pc,turb,wq,fo,fc,blk,obj,th]);$("csvN").textContent=rows.length+" แถว";
   check();
 }
-function onEv(e){log("[EVENT] "+(e.msg||JSON.stringify(e)),e.bad?C.bad:e.event==="clear"?C.ok:C.water)}
+function onEv(e){
+  var k=String(e.event||"");log("[EVENT] "+(e.msg||JSON.stringify(e)),e.bad?C.bad:k==="clear"?C.ok:C.water);
+  if(k==="alarm_obj"||k==="alarm_low"||k==="clear"){   // ไม่ต้องรอรายงานรอบ 5 วินาที
+    lastAt=Date.now();L.alarm=k.slice(6);L.fo=k==="alarm_obj"?1:0;if(k==="alarm_obj")found=now();
+    paintObj(L.fo);check();
+  }
+}
 
 function check(){
   var sil=!lastAt||Date.now()-lastAt>SIL,b=$("banner"),why="",al=sil?"":(L.alarm||""),li=lvl(sil?null:L.tank),m="",w=0;
